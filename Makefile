@@ -68,7 +68,7 @@ release-push: release-verify
 	git tag -a "v$(VERSION)" -m "Release v$(VERSION)"
 	git push origin "v$(VERSION)"
 
-# Full release: tests, optional version commit, push main, tag, push tag.
+# Full release: tests, optional version commit, push master, tag, push tag.
 # Usage: make release-bump VERSION=0.1.1   # if bumping
 #        git add … && git commit …          # other release changes
 #        make release VERSION=0.1.1

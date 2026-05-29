@@ -26,7 +26,7 @@
 ### Установка (один раз)
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/blokhinnv/claudep/main/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/blokhinnv/claudep/master/install.sh | sh
 ```
 
 Установщик:
@@ -167,15 +167,14 @@ cargo run -- down
 ### Первый push репозитория
 
 1. Создайте пустой репозиторий **`claudep`** на GitHub (без README/LICENSE — они уже в проекте).
-2. Укажите remote и запушьте ветку **`main`** (URL в `install.sh` ссылается на `main`):
+2. Укажите remote и запушьте ветку **`master`**:
 
 ```bash
 git remote set-url origin https://github.com/blokhinnv/claudep.git
-git branch -M main
-git push -u origin main
+git push -u origin master
 ```
 
-3. В настройках репозитория на GitHub: **Settings → General → Default branch** → `main`.
+3. В настройках репозитория на GitHub: **Settings → General → Default branch** → `master`.
 
 ### Перед релизом
 
@@ -191,7 +190,7 @@ make templates-tar            # локально проверить dist/templat
 ```bash
 git add Cargo.toml Cargo.lock README.md   # и другие файлы релиза
 git commit -m "Release v0.1.0"
-git push origin main
+git push origin master
 ```
 
 ### Создание GitHub Release
@@ -235,7 +234,7 @@ gh release view v0.1.0
 2. На чистой машине (или в CI):
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/blokhinnv/claudep/main/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/blokhinnv/claudep/master/install.sh | sh
 claudep doctor
 claudep sync
 ```
@@ -249,7 +248,7 @@ claudep sync
 make check
 git add Cargo.toml Cargo.lock
 git commit -m "Release v0.1.1"
-git push origin main
+git push origin master
 
 # 2. тег и push
 git tag v0.1.1
