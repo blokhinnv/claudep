@@ -1,0 +1,32 @@
+[package]
+name = "claudep"
+version = "0.1.0"
+edition = "2021"
+description = "CLI for Claude Code in an isolated Docker stack with gost proxy relay"
+license = "MIT"
+repository = "https://github.com/blokhinnv/claudep"
+
+[[bin]]
+name = "claudep"
+path = "src/main.rs"
+
+[[bin]]
+name = "render-fixture"
+path = "src/bin/render_fixture.rs"
+
+[dependencies]
+anyhow = "1"
+clap = { version = "4", features = ["derive"] }
+directories = "6"
+flate2 = "1"
+hex = "0.4"
+reqwest = { version = "0.12", default-features = false, features = ["blocking", "json", "rustls-tls"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+serde_yaml = "0.9"
+sha2 = "0.10"
+tar = "0.4"
+thiserror = "2"
+
+[dev-dependencies]
+tempfile = "3"

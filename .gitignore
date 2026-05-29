@@ -1,4 +1,2 @@
 target/
-extension/target/
-extension/extension.wasm
 .DS_Store

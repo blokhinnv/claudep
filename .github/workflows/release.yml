@@ -1,0 +1,75 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            asset: claudep-darwin-arm64
+          - os: macos-13
+            target: x86_64-apple-darwin
+            asset: claudep-darwin-amd64
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            asset: claudep-linux-amd64
+          - os: ubuntu-24.04-arm
+            target: aarch64-unknown-linux-gnu
+            asset: claudep-linux-arm64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - uses: Swatinem/rust-cache@v2
+      - name: Build release binary
+        run: cargo build --release --target ${{ matrix.target }}
+      - name: Prepare artifact
+        run: |
+          mkdir -p dist
+          cp "target/${{ matrix.target }}/release/claudep" "dist/${{ matrix.asset }}"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.asset }}
+          path: dist/${{ matrix.asset }}
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - name: Build templates tarball
+        run: |
+          mkdir -p dist
+          tar -czf dist/templates.tar.gz -C templates .
+      - name: Checksums
+        run: |
+          cd dist
+          shasum -a 256 claudep-* templates.tar.gz > checksums.txt
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/claudep-darwin-arm64
+            dist/claudep-darwin-amd64
+            dist/claudep-linux-amd64
+            dist/claudep-linux-arm64
+            dist/templates.tar.gz
+            dist/checksums.txt
