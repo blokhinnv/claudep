@@ -203,10 +203,10 @@ gh release view v0.1.1
 
 | Job | Что делает |
 | --- | ---------- |
-| `build` | Сборка `claudep` для darwin/linux × arm64/amd64 |
+| `build` | Сборка `claudep`: darwin arm64, linux arm64/amd64 |
 | `release` | `templates.tar.gz`, `checksums.txt`, публикация в Releases |
 
-**Артефакты:** `claudep-darwin-arm64`, `claudep-darwin-amd64`, `claudep-linux-amd64`, `claudep-linux-arm64`, `templates.tar.gz`, `checksums.txt`.
+**Артефакты:** `claudep-darwin-arm64`, `claudep-linux-amd64`, `claudep-linux-arm64`, `templates.tar.gz`, `checksums.txt`.
 
 Ручной вариант (без `make release`):
 
