@@ -1,0 +1,44 @@
+services:
+  claude-gost:
+    image: mirror.gcr.io/ginuerzh/gost:2.12.0
+    container_name: claude-gost
+    restart: unless-stopped
+    command:
+      - "-L=auto://0.0.0.0:1080"
+      - "-F=${CLAUDE_PROXY}"
+    expose:
+      - 1080
+    healthcheck:
+      test: wget --quiet --spider http://claude-gost:1080 2>&1 | grep HTTP/1.1
+      interval: 10s
+
+  claude-hypognn:
+    build: .
+    container_name: claude-hypognn
+    stdin_open: true
+    tty: true
+    user: "${USER_ID}:${GROUP_ID}"
+    environment:
+      - HTTP_PROXY=http://claude-gost:1080
+      - HTTPS_PROXY=http://claude-gost:1080
+      - ALL_PROXY=http://claude-gost:1080
+      - NO_PROXY=localhost,127.0.0.1
+      - HOME=/var/home
+    env_file:
+      - path: ./.env
+        required: true
+    volumes:
+      - ${PROJECT_DIR}:/app/
+      - venv-data:/app/.venv
+      - ./claude_config/:/var/home/.claude/
+      - ./.claude.json:/var/home/.claude.json
+    restart: unless-stopped
+    depends_on:
+      claude-gost:
+        condition: service_healthy
+    logging:
+      options:
+        max-size: 20mb
+        max-file: 4
+volumes:
+  venv-data:
