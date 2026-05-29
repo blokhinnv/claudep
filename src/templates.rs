@@ -106,10 +106,7 @@ pub fn render_compose(input: &RenderInput<'_>) -> Result<String, TemplateError> 
             gost: GostService {
                 image: input.settings.gost_image.clone(),
                 restart: "unless-stopped".into(),
-                command: vec![
-                    "-L=auto://0.0.0.0:1080".into(),
-                    format!("-F={upstream}"),
-                ],
+                command: vec!["-L=auto://0.0.0.0:1080".into(), format!("-F={upstream}")],
                 expose: vec!["1080".into()],
                 healthcheck: Healthcheck {
                     test: format!(
@@ -168,7 +165,9 @@ pub fn render_for_context(ctx: &ProjectContext, state_dir: &str) -> Result<Strin
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::config::{runtime_from_env, ClaudepSettings, DEFAULT_GOST_IMAGE, DEFAULT_NODE_IMAGE};
+    use crate::config::{
+        runtime_from_env, ClaudepSettings, DEFAULT_GOST_IMAGE, DEFAULT_NODE_IMAGE,
+    };
 
     fn sample_context(upstream: &str) -> ProjectContext {
         ProjectContext {

@@ -2,15 +2,15 @@ use std::path::Path;
 
 use anyhow::Result;
 use claudep::{
-    claudep_home, project_id, write_artifacts, ClaudepSettings, ProjectContext, runtime_from_env,
+    claudep_home, project_id, runtime_from_env, write_artifacts, ClaudepSettings, ProjectContext,
 };
 
 fn main() -> Result<()> {
     let root = std::env::args()
         .nth(1)
         .unwrap_or_else(|| "/tmp/claudep-fixture-project".to_string());
-    let upstream = std::env::var("CLAUDEP_UPSTREAM")
-        .unwrap_or_else(|_| "socks5://127.0.0.1:1080".to_string());
+    let upstream =
+        std::env::var("CLAUDEP_UPSTREAM").unwrap_or_else(|_| "socks5://127.0.0.1:1080".to_string());
 
     let home = Path::new("/tmp/claudep-fixture-state");
     let id = project_id(&root);

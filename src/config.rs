@@ -52,7 +52,9 @@ pub struct ProjectContext {
 
 #[derive(Debug, Error)]
 pub enum ConfigError {
-    #[error("CLAUDEP_UPSTREAM is required (set upstream proxy for gost, e.g. socks5://127.0.0.1:1080)")]
+    #[error(
+        "CLAUDEP_UPSTREAM is required (set upstream proxy for gost, e.g. socks5://127.0.0.1:1080)"
+    )]
     MissingUpstream,
     #[error("invalid configuration: {0}")]
     Invalid(String),

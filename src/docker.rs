@@ -47,10 +47,7 @@ pub fn check_docker_available() -> Result<()> {
         .context("failed to run docker (is Docker installed?)")?;
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
-        bail!(
-            "Docker daemon is not available: {}",
-            stderr.trim()
-        );
+        bail!("Docker daemon is not available: {}", stderr.trim());
     }
     Ok(())
 }
@@ -106,7 +103,10 @@ fn down_with_compose_file(ctx: &ProjectContext, remove_image: bool) -> Result<()
 
 fn down_by_project_name(compose_project: &str, remove_image: bool) -> Result<()> {
     let mut cmd = Command::new("docker");
-    cmd.arg("compose").arg("-p").arg(compose_project).arg("down");
+    cmd.arg("compose")
+        .arg("-p")
+        .arg(compose_project)
+        .arg("down");
     if remove_image {
         cmd.arg("--rmi").arg("local");
     }
@@ -207,7 +207,10 @@ pub fn wait_for_gost_healthy(ctx: &ProjectContext) -> Result<()> {
         }
 
         if Instant::now() >= deadline {
-            bail!("timed out waiting for gost to become healthy ({}s)", HEALTH_TIMEOUT.as_secs());
+            bail!(
+                "timed out waiting for gost to become healthy ({}s)",
+                HEALTH_TIMEOUT.as_secs()
+            );
         }
         thread::sleep(HEALTH_POLL);
     }
@@ -215,9 +218,7 @@ pub fn wait_for_gost_healthy(ctx: &ProjectContext) -> Result<()> {
 
 pub fn compose_exec_interactive(ctx: &ProjectContext, shell: bool) -> Result<()> {
     if !is_service_running(ctx, APP_SERVICE)? {
-        bail!(
-            "service '{APP_SERVICE}' is not running; run `claudep` first to start the stack"
-        );
+        bail!("service '{APP_SERVICE}' is not running; run `claudep` first to start the stack");
     }
 
     let exec_target = if shell { "bash" } else { "claude" };
@@ -230,9 +231,7 @@ pub fn compose_exec_interactive(ctx: &ProjectContext, shell: bool) -> Result<()>
         .stdout(Stdio::inherit())
         .stderr(Stdio::inherit());
 
-    let status = cmd
-        .status()
-        .context("failed to run docker compose exec")?;
+    let status = cmd.status().context("failed to run docker compose exec")?;
     if !status.success() {
         bail!("docker compose exec exited with status {status}");
     }

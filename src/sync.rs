@@ -28,12 +28,8 @@ struct Release {
 pub fn sync_templates() -> Result<()> {
     let home = claudep_home()?;
     let target = templates_dir(&home);
-    fs::create_dir_all(&target).with_context(|| {
-        format!(
-            "failed to create templates directory {}",
-            target.display()
-        )
-    })?;
+    fs::create_dir_all(&target)
+        .with_context(|| format!("failed to create templates directory {}", target.display()))?;
 
     match download_templates(&target) {
         Ok(version) => {
@@ -56,7 +52,9 @@ fn download_templates(target: &Path) -> Result<String> {
         .context("failed to create HTTP client")?;
 
     let release: Release = client
-        .get(format!("https://api.github.com/repos/{GITHUB_REPO}/releases/latest"))
+        .get(format!(
+            "https://api.github.com/repos/{GITHUB_REPO}/releases/latest"
+        ))
         .send()
         .context("failed to query GitHub releases")?
         .error_for_status()
@@ -86,7 +84,10 @@ fn download_templates(target: &Path) -> Result<String> {
 fn extract_templates(target: &Path, bytes: &[u8]) -> Result<()> {
     let decoder = GzDecoder::new(Cursor::new(bytes));
     let mut archive = Archive::new(decoder);
-    for entry in archive.entries().context("failed to read templates archive")? {
+    for entry in archive
+        .entries()
+        .context("failed to read templates archive")?
+    {
         let mut entry = entry.context("failed to read templates archive entry")?;
         let path = entry.path().context("invalid path in templates archive")?;
         if path
@@ -97,14 +98,12 @@ fn extract_templates(target: &Path, bytes: &[u8]) -> Result<()> {
         }
         let out_path = target.join(path);
         if let Some(parent) = out_path.parent() {
-            fs::create_dir_all(parent).with_context(|| {
-                format!("failed to create directory {}", parent.display())
-            })?;
+            fs::create_dir_all(parent)
+                .with_context(|| format!("failed to create directory {}", parent.display()))?;
         }
         if entry.header().entry_type().is_dir() {
-            fs::create_dir_all(&out_path).with_context(|| {
-                format!("failed to create directory {}", out_path.display())
-            })?;
+            fs::create_dir_all(&out_path)
+                .with_context(|| format!("failed to create directory {}", out_path.display()))?;
         } else {
             let mut file = fs::File::create(&out_path)
                 .with_context(|| format!("failed to create {}", out_path.display()))?;

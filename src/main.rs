@@ -6,7 +6,7 @@ use clap::{Parser, Subcommand};
 use claudep::{
     check_compose_available, check_docker_available, compose_down, compose_down_with_options,
     compose_exec_interactive, compose_file, compose_ps, ensure_stack, ensure_upstream,
-    is_service_running, remove_state_dir, ProjectContext, sync_templates, write_artifacts,
+    is_service_running, remove_state_dir, sync_templates, write_artifacts, ProjectContext,
     APP_SERVICE,
 };
 
