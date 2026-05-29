@@ -50,14 +50,18 @@ prompt_upstream() {
     return
   fi
 
-  local input
-  if [[ -t 0 ]]; then
-    read -r -p "CLAUDEP_UPSTREAM [${DEFAULT_UPSTREAM}]: " input
-    CLAUDEP_UPSTREAM="${input:-$DEFAULT_UPSTREAM}"
+  local input tty=/dev/tty
+  if [[ ! -t 0 ]]; then
+    if [[ ! -e $tty ]]; then
+      echo "CLAUDEP_UPSTREAM is required; set it in the environment or run install from a terminal" >&2
+      exit 1
+    fi
+    printf 'CLAUDEP_UPSTREAM [%s]: ' "$DEFAULT_UPSTREAM" >"$tty"
+    read -r input <"$tty"
   else
-    CLAUDEP_UPSTREAM="$DEFAULT_UPSTREAM"
-    info "non-interactive install; defaulting CLAUDEP_UPSTREAM=$CLAUDEP_UPSTREAM"
+    read -r -p "CLAUDEP_UPSTREAM [${DEFAULT_UPSTREAM}]: " input
   fi
+  CLAUDEP_UPSTREAM="${input:-$DEFAULT_UPSTREAM}"
 }
 
 write_shell_snippet() {
@@ -97,7 +101,7 @@ main() {
   platform="$(detect_platform)"
   binary_name="claudep-${platform}"
   tmpdir="$(mktemp -d)"
-  trap 'rm -rf "$tmpdir"' EXIT
+  trap "rm -rf '$tmpdir'" EXIT
 
   info "installing claudep for ${platform}"
   mkdir -p "$INSTALL_DIR" "$CLAUDEP_HOME" "$TEMPLATES_DIR"
