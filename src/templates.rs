@@ -3,7 +3,7 @@ use thiserror::Error;
 
 use crate::config::{ClaudepSettings, ProjectContext};
 
-pub const TEMPLATE_VERSION: &str = "1";
+pub const TEMPLATE_VERSION: &str = "2";
 pub const EMBEDDED_DOCKERFILE: &str = include_str!("../templates/Dockerfile");
 
 const GOST_SERVICE: &str = "gost";
@@ -133,7 +133,11 @@ pub fn render_compose(input: &RenderInput<'_>) -> Result<String, TemplateError> 
                     no_proxy: "localhost,127.0.0.1".into(),
                     home: "/var/home".into(),
                 },
-                volumes: vec![format!("{}:/app", input.project_dir)],
+                volumes: vec![
+                    format!("{}:/app", input.project_dir),
+                    format!("{}/claude_config:/var/home/.claude", input.state_dir),
+                    format!("{}/.claude.json:/var/home/.claude.json", input.state_dir),
+                ],
                 restart: "unless-stopped".into(),
                 depends_on: DependsOn {
                     gost: ServiceCondition {
@@ -207,6 +211,7 @@ mod tests {
     #[test]
     fn dockerfile_is_embedded() {
         assert!(EMBEDDED_DOCKERFILE.contains("claude-code"));
+        assert!(EMBEDDED_DOCKERFILE.contains("/var/home"));
         assert!(!EMBEDDED_DOCKERFILE.contains("uv"));
     }
 
@@ -216,5 +221,13 @@ mod tests {
         let yaml = render_for_context(&ctx, "/tmp/state").unwrap();
         assert!(yaml.contains("gost:"));
         assert!(yaml.contains("app:"));
+    }
+
+    #[test]
+    fn compose_mounts_claude_config_from_state_dir() {
+        let ctx = sample_context("socks5://127.0.0.1:1080");
+        let yaml = render_for_context(&ctx, "/tmp/state").unwrap();
+        assert!(yaml.contains("/tmp/state/claude_config:/var/home/.claude"));
+        assert!(yaml.contains("/tmp/state/.claude.json:/var/home/.claude.json"));
     }
 }

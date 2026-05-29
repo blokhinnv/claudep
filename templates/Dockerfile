@@ -9,6 +9,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 RUN npm install -g @anthropic-ai/claude-code
 
+# HOME=/var/home in compose; runtime user is host UID (not necessarily node).
+RUN mkdir -p /var/home && chmod 1777 /var/home
+
 WORKDIR /app
 
 CMD ["tail", "-f", "/dev/null"]

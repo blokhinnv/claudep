@@ -1,6 +1,9 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
+#[cfg(unix)]
+use std::os::unix::fs::PermissionsExt;
+
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use thiserror::Error;
@@ -11,6 +14,8 @@ use crate::templates::{self, EMBEDDED_DOCKERFILE, TEMPLATE_VERSION};
 pub const COMPOSE_FILE: &str = "docker-compose.yml";
 pub const MANIFEST_FILE: &str = ".render-manifest.json";
 const DOCKERFILE: &str = "Dockerfile";
+const CLAUDE_CONFIG_DIR: &str = "claude_config";
+const CLAUDE_JSON_FILE: &str = ".claude.json";
 
 #[derive(Debug, Error)]
 pub enum StateError {
@@ -82,10 +87,40 @@ fn dockerfile_content(ctx: &ProjectContext) -> String {
     fs::read_to_string(&template_path).unwrap_or_else(|_| EMBEDDED_DOCKERFILE.to_string())
 }
 
+/// Claude Code config bind-mounts from `state_dir`; permissive modes for dynamic container UID.
+pub fn ensure_claude_home_artifacts(state_dir: &Path) -> Result<(), StateError> {
+    let config_dir = state_dir.join(CLAUDE_CONFIG_DIR);
+    fs::create_dir_all(&config_dir).map_err(|e| StateError::Io {
+        path: config_dir.display().to_string(),
+        source: e,
+    })?;
+    #[cfg(unix)]
+    fs::set_permissions(&config_dir, fs::Permissions::from_mode(0o777)).map_err(|e| {
+        StateError::Io {
+            path: config_dir.display().to_string(),
+            source: e,
+        }
+    })?;
+
+    let claude_json = state_dir.join(CLAUDE_JSON_FILE);
+    if !claude_json.is_file() {
+        write_file(&claude_json, "{}\n")?;
+    }
+    #[cfg(unix)]
+    fs::set_permissions(&claude_json, fs::Permissions::from_mode(0o666)).map_err(|e| {
+        StateError::Io {
+            path: claude_json.display().to_string(),
+            source: e,
+        }
+    })?;
+    Ok(())
+}
+
 /// Write or refresh artifacts under `ctx.state_dir`.
 pub fn write_artifacts(ctx: &ProjectContext) -> Result<WriteResult, StateError> {
     let state_dir = ctx.state_dir.clone();
     ensure_state_dir(&state_dir)?;
+    ensure_claude_home_artifacts(&state_dir)?;
     let state_dir_str = state_dir.to_string_lossy().into_owned();
     let fp = fingerprint(ctx, &state_dir_str);
     let manifest_path = state_dir.join(MANIFEST_FILE);
@@ -165,8 +200,11 @@ mod tests {
         assert!(result.regenerated);
         assert!(result.state_dir.join(COMPOSE_FILE).is_file());
         assert!(result.state_dir.join(DOCKERFILE).is_file());
+        assert!(result.state_dir.join(CLAUDE_CONFIG_DIR).is_dir());
+        assert!(result.state_dir.join(CLAUDE_JSON_FILE).is_file());
         let compose = fs::read_to_string(result.state_dir.join(COMPOSE_FILE)).unwrap();
         assert!(compose.contains("socks5://127.0.0.1:1080"));
+        assert!(compose.contains("/var/home/.claude"));
     }
 
     #[test]

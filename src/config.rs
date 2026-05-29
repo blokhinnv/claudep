@@ -110,10 +110,43 @@ pub fn templates_dir(home: &Path) -> PathBuf {
         .unwrap_or_else(|_| home.join("templates"))
 }
 
+fn host_uid_gid() -> (String, String) {
+    if let (Ok(uid), Ok(gid)) = (env::var("UID"), env::var("GID")) {
+        if !uid.is_empty() && !gid.is_empty() {
+            return (uid, gid);
+        }
+    }
+
+    #[cfg(unix)]
+    {
+        let uid = std::process::Command::new("id")
+            .arg("-u")
+            .output()
+            .ok()
+            .filter(|o| o.status.success())
+            .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string())
+            .filter(|s| !s.is_empty());
+        let gid = std::process::Command::new("id")
+            .arg("-g")
+            .output()
+            .ok()
+            .filter(|o| o.status.success())
+            .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string())
+            .filter(|s| !s.is_empty());
+        if let (Some(uid), Some(gid)) = (uid, gid) {
+            return (uid, gid);
+        }
+    }
+
+    (
+        DEFAULT_USER_ID.to_string(),
+        DEFAULT_GROUP_ID.to_string(),
+    )
+}
+
 pub fn runtime_from_env(project_dir: impl Into<String>) -> RuntimeContext {
     let project_dir = project_dir.into();
-    let user_id = env::var("UID").unwrap_or_else(|_| DEFAULT_USER_ID.to_string());
-    let group_id = env::var("GID").unwrap_or_else(|_| DEFAULT_GROUP_ID.to_string());
+    let (user_id, group_id) = host_uid_gid();
     RuntimeContext {
         project_dir,
         user_id,
