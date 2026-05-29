@@ -158,6 +158,108 @@ cargo run -- down
 
 ---
 
+## Публикация
+
+Репозиторий: [github.com/blokhinnv/claudep](https://github.com/blokhinnv/claudep).
+
+`install.sh` и `claudep sync` скачивают бинарники и `templates.tar.gz` из **GitHub Releases**. Пока релиза нет, `sync` использует embedded Dockerfile.
+
+### Первый push репозитория
+
+1. Создайте пустой репозиторий **`claudep`** на GitHub (без README/LICENSE — они уже в проекте).
+2. Укажите remote и запушьте ветку **`main`** (URL в `install.sh` ссылается на `main`):
+
+```bash
+git remote set-url origin https://github.com/blokhinnv/claudep.git
+git branch -M main
+git push -u origin main
+```
+
+3. В настройках репозитория на GitHub: **Settings → General → Default branch** → `main`.
+
+### Перед релизом
+
+```bash
+make check                    # fmt, clippy, tests
+make templates-tar            # локально проверить dist/templates.tar.gz
+```
+
+Обновите версию в [`Cargo.toml`](Cargo.toml) (`version = "0.1.0"`) — её видит `claudep --version` и `claudep doctor`.
+
+Закоммитьте изменения:
+
+```bash
+git add Cargo.toml Cargo.lock README.md   # и другие файлы релиза
+git commit -m "Release v0.1.0"
+git push origin main
+```
+
+### Создание GitHub Release
+
+Релиз собирается workflow [`.github/workflows/release.yml`](.github/workflows/release.yml) при push тега **`v*`**:
+
+| Job | Что делает |
+|-----|------------|
+| `build` | Сборка `claudep` для darwin/linux × arm64/amd64 |
+| `release` | `templates.tar.gz`, `checksums.txt`, публикация в Releases |
+
+**Команды:**
+
+```bash
+# тег должен совпадать с версией в Cargo.toml (с префиксом v)
+git tag v0.1.0
+git push origin v0.1.0
+```
+
+Или посмотреть статус Actions:
+
+```bash
+gh run list --workflow=release.yml
+gh release view v0.1.0
+```
+
+**Артефакты релиза:**
+
+| Файл | Назначение |
+|------|------------|
+| `claudep-darwin-arm64` | macOS Apple Silicon |
+| `claudep-darwin-amd64` | macOS Intel |
+| `claudep-linux-amd64` | Linux x86_64 |
+| `claudep-linux-arm64` | Linux ARM64 |
+| `templates.tar.gz` | Dockerfile для `install.sh` / `claudep sync` |
+| `checksums.txt` | SHA-256 суммы |
+
+### Проверка после релиза
+
+1. Дождитесь зелёного workflow **Release** в GitHub Actions.
+2. На чистой машине (или в CI):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/blokhinnv/claudep/main/install.sh | sh
+claudep doctor
+claudep sync
+```
+
+3. Убедитесь, что `claudep sync` больше не пишет «could not fetch release templates».
+
+### Последующие релизы
+
+```bash
+# 1. bump version в Cargo.toml (например 0.1.1)
+make check
+git add Cargo.toml Cargo.lock
+git commit -m "Release v0.1.1"
+git push origin main
+
+# 2. тег и push
+git tag v0.1.1
+git push origin v0.1.1
+```
+
+Пользователи обновляют CLI через повторный `install.sh` или скачивают бинарь с Releases; шаблоны — через `claudep sync`.
+
+---
+
 ## Troubleshooting
 
 | Симптом | Решение |
