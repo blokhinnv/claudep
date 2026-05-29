@@ -1,0 +1,6 @@
+# Повышает устойчивость к медленному/нестабильному доступу к crates.io.
+# Зеркала — см. docs/development.md (раздел «Проблемы с crates.io»).
+
+[net]
+retry = 10
+git-fetch-with-cli = true

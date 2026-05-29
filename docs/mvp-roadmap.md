@@ -196,10 +196,11 @@ services:
 
 ### Фаза 0 — Каркас репозитория (0.5–1 дн.)
 
-- [ ] Структура crate: `extension/` (Rust + `extension.toml`)
-- [ ] CI: `cargo build --target wasm32-wasi` (или актуальный target Zed)
-- [ ] `docs/` + обновить корневой `README.md` (ссылка на roadmap, quick start)
-- [ ] Зафиксировать минимальную версию Zed / `zed_extension_api`
+- [x] Структура crate: `extension/` (Rust + `extension.toml`)
+- [x] CI: `cargo build --target wasm32-wasip2`
+- [x] `docs/` + обновить корневой `README.md` (ссылка на roadmap, quick start)
+- [x] Зафиксировать минимальную версию Zed / `zed_extension_api`
+- [x] Инструкция как собирать и устанавливать расширение
 
 **Результат:** пустое расширение ставится в Zed, видно в списке extensions.
 
@@ -211,6 +212,7 @@ services:
 - [ ] Модуль `config`: чтение settings + `workspace_root` → `ProjectContext`
 - [ ] Модуль `templates`: embed `Dockerfile`, `docker-compose.yml.tpl`; рендер в итоговый `docker-compose.yml`
 - [ ] Модуль `state`: `ensure_state_dir`, запись `docker-compose.yml` + `Dockerfile`, перегенерация при смене settings/workspace
+- [ ] Инструкция как проверить что все что нужно собирается
 
 **Результат:** по команде (или тесту) в `state_dir` появляется валидный `docker-compose.yml` с литеральными значениями (без `.env`).
 
