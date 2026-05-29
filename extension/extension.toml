@@ -1,7 +1,0 @@
-id = "zed-claude-proxy"
-name = "Zed Claude Proxy"
-version = "0.0.1"
-schema_version = 1
-authors = ["Nikita Blokhin"]
-description = "Run Claude Code in Docker with proxy for Zed workspaces"
-repository = "https://github.com/blokhinnv/zed-claude-proxy"

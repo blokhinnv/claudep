@@ -1,75 +1,170 @@
-# Zed Claude Proxy
+# claudep
 
-Расширение для **Zed**, которое автоматизирует запуск **Claude Code** в Docker-контейнере с VPN/прокси для регионов, где API недоступен напрямую.
+**claudep** (*claude* + *p*roxy) — CLI для [Claude Code](https://docs.anthropic.com/en/docs/claude-code) в изолированном Docker-стеке с relay (gost) до вашего upstream-прокси, когда API недоступен напрямую из региона.
 
-Пользователь открывает проект в Zed и одной командой получает интерактивный shell внутри контейнера, где уже настроены прокси и установлен `claude-code`. Расширение само проверяет, поднят ли стек для **текущего** workspace, при необходимости создаёт и запускает его, без ручного редактирования `docker-compose.yml` в репозитории проекта.
+Обычная команда **`claude`** запускает CLI на хосте. **`claudep`** поднимает per-project стек (gost + app), монтирует текущий каталог в контейнер и направляет трафик через relay — без `docker-compose.yml` в git.
 
-**Статус:** фаза 0 — каркас расширения (сборка WASM, dev install). Команды Docker — в разработке (см. [roadmap](docs/mvp-roadmap.md)).
+Работает из **корня любого проекта** в терминале.
 
-## Документация
+> Неофициальный инструмент, не связан с Anthropic.
 
-- [MVP Roadmap](docs/mvp-roadmap.md) — план фаз и критерии приёмки
-- [Разработка](docs/development.md) — сборка, установка dev extension, совместимость
+**Статус:** проектирование и установщик; реализация CLI — в работе.
 
-## Quick start (фаза 0)
+---
 
-**macOS:** пошаговая установка (Xcode CLT, rustup, Zed, Docker позже) — [docs/development.md#установка-на-macos](docs/development.md#установка-на-macos).
+## Зачем
 
-1. Установите [Rust через rustup](https://rustup.rs/).
+| Проблема | Решение claudep |
+|----------|-----------------|
+| `claude` на хосте не ходит в API без VPN/прокси | Relay в контейнере **gost** → ваш `CLAUDEP_UPSTREAM` |
+| Не хочется класть `docker-compose.yml` в репозиторий | Артефакты только в `~/.local/share/claudep/state/` |
+| Несколько проектов параллельно | Один `project_id` на каталог → отдельный compose-проект |
+| Повторный заход в тот же проект | Идемпотентный `claudep` + быстрый `claudep attach` |
 
-2. Соберите расширение из корня репозитория:
+---
+
+## Быстрый старт
+
+### Установка (один раз)
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/<org>/claudep/main/install.sh | sh
+```
+
+Установщик:
+
+1. Кладёт бинарь **`claudep`** в `~/.local/bin` (или путь из `$CLAUDEP_INSTALL_DIR`).
+2. Скачивает **шаблоны Docker** в `~/.local/share/claudep/templates/` (compose, Dockerfile, gost).
+3. Дописывает в shell-профиль (`~/.zshrc`, `~/.bashrc`) (во время установки надо спросить значение и предложить дефолт!):
 
    ```bash
-   make build
+   export CLAUDEP_HOME="${CLAUDEP_HOME:-$HOME/.local/share/claudep}"
+   export CLAUDEP_TEMPLATES="$CLAUDEP_HOME/templates"
+   # Upstream для gost (SOCKS5/HTTP на хосте). Обязателен в «закрытых» регионах.
+   export CLAUDEP_UPSTREAM="${CLAUDEP_UPSTREAM:-socks5://127.0.0.1:1080}"
    ```
 
-   (установит WASM target и соберёт release; см. [`Makefile`](Makefile))
+4. Проверяет наличие `docker` и `docker compose` (предупреждение, если нет).
 
-3. В Zed: `zed: extensions` → **Install Dev Extension** → выберите каталог `extension/` этого репозитория.
+Перезагрузите shell или `source ~/.zshrc`.
 
-Подробнее: [docs/development.md](docs/development.md).
+### В каталоге проекта
 
-## Стек
+```bash
+cd ~/Developer/my-app
 
-| Слой | Технология |
-|------|------------|
-| IDE | [Zed](https://zed.dev) **1.4.x** (протестировано с 1.4.2; также 0.205+) |
-| Расширение | `extension.toml` + Rust → **WebAssembly** (`wasm32-wasip2`, `zed_extension_api` **0.7.0**) |
-| Оркестрация | **Docker Compose** v2 (`docker compose`) |
-| Прокси | [gost](https://github.com/ginuerzh/gost) — SOCKS/HTTP relay |
-| Runtime Claude | Node.js slim + `@anthropic-ai/claude-code` |
-| Данные на хосте | Сгенерированные compose/Dockerfile в `state_dir` расширения |
+# Поднять стек для cwd, если ещё не запущен (gost + app)
+claudep
 
-**Системные зависимости (для полного MVP):** Docker Engine / Docker Desktop, `docker compose`, доступ к Docker socket.
+# Интерактивный shell / claude внутри контейнера
+claudep attach
+```
 
-## Планируемые команды (MVP)
+Первый **`claudep`** для этой папки: генерирует compose в state, собирает образ, стартует контейнеры.  
+Повторный **`claudep`** для той же папки: no-op или `compose up -d`, если стек уже есть.
 
-- **Claude: Start Container** — поднять gost + app для текущего workspace
-- **Claude: Open in Terminal** — `docker compose exec` → `claude` в контейнере
+---
 
-## Подход
+## Команды
+
+| Команда | Назначение |
+|---------|------------|
+| **`claudep`** | Убедиться, что стек для **текущего** `cwd` запущен (идемпотентно) |
+| `claudep attach` | `docker compose exec` → shell (или `claude`) в app-контейнере |
+| `claudep down` | Остановить стек этого проекта |
+| `claudep status` | Контейнеры / health gost / путь к state |
+| `claudep doctor` | Docker, переменные, доступность upstream |
+| `claudep sync` | Обновить шаблоны с релиза |
+
+---
+
+## Как это устроено
 
 ### Принципы
 
-1. **Изоляция по проекту** — один workspace = один compose-проект. Несколько проектов могут работать параллельно.
-2. **Не трогаем репозиторий пользователя** — артефакты только в служебной папке на хосте.
-3. **Идемпотентность** — повторный вызов не поднимает дубликаты.
+1. **Изоляция по проекту** — несколько проектов = несколько compose.
+2. **Репозиторий пользователя не меняется** — только `~/.local/share/claudep/state/<project_id>/`.
+3. **Идемпотентность** — **`claudep`** без субкоманды безопасно вызывать многократно.
 
 ### Идентификация проекта
 
 ```
-project_root    = корень workspace в Zed
-project_id      = стабильный slug/hash от project_root (например, sha256[:8])
-compose_project = "zed-claude-" + project_id
+project_root    = абсолютный путь к cwd (или --project-dir)
+project_id      = стабильный slug, например sha256(project_root)[:12]
+compose_project = "claudep-" + project_id
+state_dir       = $CLAUDEP_HOME/state/<project_id>/
 ```
 
-### Настройки
+В `state_dir` лежат сгенерированные `docker-compose.yml`, контекст сборки, служебные volume-метаданные — **не** в git.
 
-Прокси и образы задаются **только в settings расширения** (`claude_proxy` и др.) — см. [roadmap](docs/mvp-roadmap.md).
+### Стек Docker (на проект)
 
-## Референс Docker
+```mermaid
+flowchart LR
+  subgraph host["Host"]
+    CLI["claudep CLI"]
+    State["~/.local/share/claudep/state/{id}/"]
+    Tpl["~/.local/share/claudep/templates/"]
+  end
 
-Каталог [`docker/`](docker/) — пример compose/Dockerfile до переноса в `extension/templates/` (фаза 1+).
+  subgraph compose["Docker Compose claudep-{id}"]
+    Gost["gost\nrelay CLAUDEP_UPSTREAM"]
+    App["app\nNode + claude-code\n/project → /app"]
+  end
+
+  CLI --> State
+  Tpl -->|"render"| State
+  CLI -->|"compose up / exec"| compose
+  Gost --> App
+  App -->|"HTTP_PROXY"| Gost
+```
+
+| Сервис | Роль |
+|--------|------|
+| **gost** | Relay: локальный HTTP/SOCKS в стеке  |
+| **app** | Node slim + `@anthropic-ai/claude-code`, mount `project_root` → `/app` |
+
+Переменные в app-контейнере: `HTTP_PROXY`, `HTTPS_PROXY`, `ALL_PROXY` → gost; `NO_PROXY=localhost,127.0.0.1`.
+
+---
+
+## Конфигурация
+
+### Переменные окружения
+
+| Переменная | По умолчанию | Описание |
+|------------|--------------|----------|
+| `CLAUDEP_HOME` | `~/.local/share/claudep` | Корень данных и state |
+| `CLAUDEP_TEMPLATES` | `$CLAUDEP_HOME/templates` | Шаблоны compose/Dockerfile |
+| `CLAUDEP_UPSTREAM` | *(нет)* | Upstream на хосте для gost (`socks5://…`, `http://…`) |
+| `CLAUDEP_INSTALL_DIR` | `~/.local/bin` | Куда положить `claudep` при install |
+| `CLAUDEP_NODE_IMAGE` | `node:22-slim` | Базовый образ app-сервиса |
+
+---
+
+## Установщик `install.sh`
+
+Поведение (целевое):
+
+```
+install.sh
+├── detect OS/arch (darwin/linux, arm64/amd64)
+├── install claudep binary → $CLAUDEP_INSTALL_DIR
+├── fetch templates tarball → $CLAUDEP_TEMPLATES
+├── write/update shell snippet (idempotent grep CLAUDEP_HOME)
+└── claudep doctor (soft check)
+```
+
+---
+
+## Требования
+
+- **Docker** Engine или Docker Desktop
+- **`docker compose`** v2
+- Доступный **upstream** (`CLAUDEP_UPSTREAM`) с хоста, куда gost сможет подключиться
+- macOS или Linux (Windows — через WSL2 + Docker внутри WSL)
+
+---
 
 ## Лицензия
 
