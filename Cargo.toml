@@ -1,6 +1,6 @@
 [package]
 name = "claudep"
-version = "0.1.4"
+version = "0.1.5"
 edition = "2021"
 description = "CLI for Claude Code in an isolated Docker stack with gost proxy relay"
 license = "MIT"

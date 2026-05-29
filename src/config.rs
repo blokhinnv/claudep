@@ -138,10 +138,7 @@ fn host_uid_gid() -> (String, String) {
         }
     }
 
-    (
-        DEFAULT_USER_ID.to_string(),
-        DEFAULT_GROUP_ID.to_string(),
-    )
+    (DEFAULT_USER_ID.to_string(), DEFAULT_GROUP_ID.to_string())
 }
 
 pub fn runtime_from_env(project_dir: impl Into<String>) -> RuntimeContext {
